@@ -3,6 +3,10 @@ const password = de.config().parsed.password;
 import pg from 'pg'
 const { Client } = pg
 const client = new Client({database:'transactions', password: password});
+import * as readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+
+const rl = readline.createInterface({ input, output });
 
 const response = await client.connect();
 console.log("Connection created");
@@ -15,8 +19,7 @@ async function createExpenseTable() {
                                       transaction_date date NOT NULL DEFAULT current_date,
                                       CONSTRAINT postive_amount CHECK(amount > 0)
                                       )`
-  const data = await client.query(queryStr);
-  console.log("Expense table created");
+  await client.query(queryStr);
 }
 
 async function dropExpenseTable() {
@@ -82,6 +85,23 @@ async function searchByMemo(memo){
   console.log(`There is/are ${data.rowCount} expense(s).`);
   console.log(formatRecords(data.rows));
 }
+
+async function clear() {
+  let  answer = await rl.question('Are you sure you want delete all records? (y/n)\n');
+  while (answer !== 'n' && answer !== 'y'){
+    answer = await rl.question(`Answer with 'y' for yes or 'n' of no.\n`);
+    console.log("answer", answer);
+  }
+  if (answer === 'n') {
+    console.log(`Clear action has been canceled.`);
+  } else if (answer === 'y')  {
+    const queryStr = `DELETE FROM expenses`;
+    const data = await client.query(queryStr);
+    console.log("All records were deleted");
+  }
+   
+  rl.close();
+}
 //dropExpenseTable();
 createExpenseTable();
 /*
@@ -113,4 +133,7 @@ switch (action) {
   case 'delete':
     let [id] = args;
     deleteById(Number(id));
+    break;
+  case 'clear':
+    clear();
 }
