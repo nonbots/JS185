@@ -107,5 +107,5 @@ switch (action) {
     break;
   case 'delete':
     let [id] = args;
-    delete(Number(id));
+    deleteById(Number(id));
 }
