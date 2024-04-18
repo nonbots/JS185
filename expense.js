@@ -8,7 +8,7 @@ const response = await client.connect();
 console.log("Connection created");
 
 async function createExpenseTable() {
-  const queryStr = `CREATE TABLE expenses (
+  const queryStr = `CREATE TABLE IF NOT EXISTS expenses (
                                       id serial PRIMARY KEY,
                                       amount decimal(4,2) NOT NULL,
                                       memo text NOT NULL,
@@ -77,8 +77,9 @@ async function searchByMemo(memo){
   console.log(`There is/are ${data.rowCount} expense(s).`);
   console.log(formatRecords(data.rows));
 }
-dropExpenseTable();
+//dropExpenseTable();
 createExpenseTable();
+/*
 add(4.66, 'picture frame');
 add(9.66, 'cookies');
 add(1.66, 'gum');
@@ -88,4 +89,23 @@ deleteById(1);
 list();
 searchByMemo('bread');
 dropExpenseTable();
-
+*/
+const action = process.argv[2];
+const args = process.argv.splice(3);
+switch (action) {
+  case 'add':
+    let [amount, memo] = args;
+    amount = Number(amount);
+    add(amount, memo);
+    break;
+  case 'list':
+    list();
+    break;
+  case 'search':
+    let [memoSearch] = args;
+    searchByMemo(memoSearch);
+    break;
+  case 'delete':
+    let [id] = args;
+    delete(Number(id));
+}
