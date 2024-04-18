@@ -12,7 +12,8 @@ async function createExpenseTable() {
                                       id serial PRIMARY KEY,
                                       amount decimal(4,2) NOT NULL,
                                       memo text NOT NULL,
-                                      transaction_date date NOT NULL DEFAULT current_date
+                                      transaction_date date NOT NULL DEFAULT current_date,
+                                      CONSTRAINT postive_amount CHECK(amount > 0)
                                       )`
   const data = await client.query(queryStr);
   console.log("Expense table created");
@@ -33,8 +34,12 @@ async function add(amount, memo){
                                           $2
                                         )`
   const values = [amount, memo];
-  const data = await client.query(queryStr, values);
-  console.log("Expense added");
+  try{
+    const data = await client.query(queryStr, values);
+    console.log("Expense added");
+  }catch(error){
+    console.log(error.message);
+  }
 }
 
 async function list() {
