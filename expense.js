@@ -10,6 +10,15 @@ const rl = readline.createInterface({ input, output });
 
 const response = await client.connect();
 console.log("Connection created");
+function displayHelp() {
+  console.log(`Commands:
+
+  add AMOUNT MEMO [DATE] - record a new expense
+  clear - delete all expenses
+  list - list all expenses
+  delete NUMBER - remove expense with id NUMBER
+  search QUERY - list expenses with a matching memo field`);
+}
 
 async function createExpenseTable() {
   const queryStr = `CREATE TABLE IF NOT EXISTS expenses (
@@ -58,7 +67,7 @@ async function list() {
 }
 
 function formatRecord(record) {
-  return `${record.id} | ${record.transaction_date} | ${record.amount} | ${record.memo}`;
+  return `${String(record.id).padStart(3)} | ${record.transaction_date.padStart(10)} | ${String(record.amount).padStart(12)} | ${record.memo}`;
 }
 function formatRecords(records){
   return records.map(formatRecord).join('\n');
@@ -136,4 +145,7 @@ switch (action) {
     break;
   case 'clear':
     clear();
+    break;
+  default:
+    displayHelp();
 }
