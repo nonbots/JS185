@@ -5,14 +5,13 @@ const { Client } = pg
 const client = new Client({database:'transactions', password: password});
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-
 const rl = readline.createInterface({ input, output });
 
 const response = await client.connect();
 console.log("Connection created");
+
 function displayHelp() {
   console.log(`Commands:
-
   add AMOUNT MEMO [DATE] - record a new expense
   clear - delete all expenses
   list - list all expenses
@@ -38,19 +37,23 @@ async function dropExpenseTable() {
 }
 
 async function add(amount, memo){
-  const queryStr = `INSERT INTO expenses (
-                                          amount,
-                                          memo
-                                        )VALUES(
-                                          $1,
-                                          $2
-                                        )`
-  const values = [amount, memo];
-  try{
-    const data = await client.query(queryStr, values);
-    console.log("Expense added");
-  }catch(error){
-    console.log(error.message);
+  if(!Number.isNaN(amount) && amount > 0 && memo !== undefined){
+    const queryStr = `INSERT INTO expenses (
+                                            amount,
+                                            memo
+                                          )VALUES(
+                                            $1,
+                                            $2
+                                          )`
+    const values = [amount, memo];
+    try{
+      const data = await client.query(queryStr, values);
+      console.log("Expense added");
+    }catch(error){
+      console.log(error.message);
+    }
+  } else {
+    console.log("You messed up!");
   }
 }
 
@@ -64,6 +67,7 @@ async function list() {
                     expenses`
   const data = await client.query(queryStr)
   console.log(formatRecords(data.rows));
+  //await client.end();
 }
 
 function formatRecord(record) {
@@ -74,10 +78,20 @@ function formatRecords(records){
 }
 
 async function deleteById(id) {
-  const queryStr = `DELETE FROM expenses WHERE id = $1`
-  const values = [id];
-  const data = await client.query(queryStr, values);
-  console.log("Record was deleted.");
+  if(!Number.isNaN(id)) {
+    const querySelStr = `SELECT * FROM expenses WHERE id = $1`;
+    const values = [id];
+    const dataSel = await client.query(querySelStr, values);
+    if(dataSel.rowCount === 1)  {
+      const queryStr = `DELETE FROM expenses WHERE id = $1`
+      const data = await client.query(queryStr, values);
+      console.log("Record was deleted.");
+    }else{
+      console.log("Record id does not exist");
+    }
+  } else {
+    console.log("Id was not provided");
+  }
 }
 
 async function searchByMemo(memo){
@@ -108,7 +122,7 @@ async function clear() {
     const data = await client.query(queryStr);
     console.log("All records were deleted");
   }
-   
+
   rl.close();
 }
 //dropExpenseTable();
@@ -149,3 +163,4 @@ switch (action) {
   default:
     displayHelp();
 }
+//await client.end();
