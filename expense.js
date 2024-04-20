@@ -1,16 +1,8 @@
-import de from 'dotenv';
-const password = de.config().parsed.password;
-import pg from 'pg'
-const { Client } = pg
-const client = new Client({database:'transactions', password: password});
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 const rl = readline.createInterface({ input, output });
 
-const response = await client.connect();
-console.log("Connection created");
-
-function displayHelp() {
+export function displayHelp(client) {
   console.log(`Commands:
   add AMOUNT MEMO [DATE] - record a new expense
   clear - delete all expenses
@@ -19,7 +11,9 @@ function displayHelp() {
   search QUERY - list expenses with a matching memo field`);
 }
 
-async function createExpenseTable() {
+export async function createExpensesTable(client) {
+  const response = await client.connect();
+  console.log("Connection created");
   const queryStr = `CREATE TABLE IF NOT EXISTS expenses (
                                       id serial PRIMARY KEY,
                                       amount decimal(4,2) NOT NULL,
@@ -28,15 +22,19 @@ async function createExpenseTable() {
                                       CONSTRAINT postive_amount CHECK(amount > 0)
                                       )`
   await client.query(queryStr);
+  await client.end();
 }
 
-async function dropExpenseTable() {
+export async function dropExpenseTable(client) {
   const queryStr = `DROP TABLE IF EXISTS expenses`;
   const data = await client.query(queryStr);
   console.log("Expenses table dropped");
+  await client.end();
 }
 
-async function add(amount, memo){
+export async function add(amount, memo, client){
+  const response = await client.connect();
+  console.log("Connection created");
   if(!Number.isNaN(amount) && amount > 0 && memo !== undefined){
     const queryStr = `INSERT INTO expenses (
                                             amount,
@@ -55,9 +53,13 @@ async function add(amount, memo){
   } else {
     console.log("You messed up!");
   }
+  await client.end();
 }
 
-async function list() {
+export async function list(client) {
+  const response = await client.connect();
+  console.log("Connection created");
+
   const queryStr = `SELECT 
                     id,
                     to_char(transaction_date, 'Dy Mon DD YYYY') AS transaction_date,
@@ -66,18 +68,21 @@ async function list() {
                   FROM 
                     expenses`
   const data = await client.query(queryStr)
+  console.log(`There is/are ${data.rowCount} expense(s)`);
   console.log(formatRecords(data.rows));
-  //await client.end();
+  await client.end();
 }
 
 function formatRecord(record) {
   return `${String(record.id).padStart(3)} | ${record.transaction_date.padStart(10)} | ${String(record.amount).padStart(12)} | ${record.memo}`;
 }
-function formatRecords(records){
+export function formatRecords(records){
   return records.map(formatRecord).join('\n');
 }
 
-async function deleteById(id) {
+export async function deleteById(id,client) {
+  const response = await client.connect();
+  console.log("Connection created");
   if(!Number.isNaN(id)) {
     const querySelStr = `SELECT * FROM expenses WHERE id = $1`;
     const values = [id];
@@ -85,16 +90,19 @@ async function deleteById(id) {
     if(dataSel.rowCount === 1)  {
       const queryStr = `DELETE FROM expenses WHERE id = $1`
       const data = await client.query(queryStr, values);
-      console.log("Record was deleted.");
+      console.log(`${data.rowCount} expense(s) deleted`);
     }else{
       console.log("Record id does not exist");
     }
   } else {
     console.log("Id was not provided");
   }
+  await client.end();
 }
 
-async function searchByMemo(memo){
+export async function searchByMemo(memo,client){
+  const response = await client.connect();
+  console.log("Connection created");
   const queryStr = `SELECT 
                     id,
                     to_char(transaction_date, 'Dy Mon DD YYYY') AS transaction_date,
@@ -107,9 +115,12 @@ async function searchByMemo(memo){
   const data = await client.query(queryStr, values);
   console.log(`There is/are ${data.rowCount} expense(s).`);
   console.log(formatRecords(data.rows));
+  await client.end();
 }
 
-async function clear() {
+export async function clear(client) {
+  const response = await client.connect();
+  console.log("Connection created");
   let  answer = await rl.question('Are you sure you want delete all records? (y/n)\n');
   while (answer !== 'n' && answer !== 'y'){
     answer = await rl.question(`Answer with 'y' for yes or 'n' of no.\n`);
@@ -123,10 +134,10 @@ async function clear() {
     console.log("All records were deleted");
   }
 
+  await client.end();
   rl.close();
 }
 //dropExpenseTable();
-createExpenseTable();
 /*
 add(4.66, 'picture frame');
 add(9.66, 'cookies');
@@ -138,29 +149,5 @@ list();
 searchByMemo('bread');
 dropExpenseTable();
 */
-const action = process.argv[2];
-const args = process.argv.splice(3);
-switch (action) {
-  case 'add':
-    let [amount, memo] = args;
-    amount = Number(amount);
-    add(amount, memo);
-    break;
-  case 'list':
-    list();
-    break;
-  case 'search':
-    let [memoSearch] = args;
-    searchByMemo(memoSearch);
-    break;
-  case 'delete':
-    let [id] = args;
-    deleteById(Number(id));
-    break;
-  case 'clear':
-    clear();
-    break;
-  default:
-    displayHelp();
-}
+
 //await client.end();
